@@ -1,6 +1,5 @@
 using Photon.Pun;
 using TMPro;
-using System.Collections;
 using UnityEngine;
 
 public class ResultUI : MonoBehaviourPunCallbacks
@@ -23,9 +22,10 @@ public class ResultUI : MonoBehaviourPunCallbacks
     [Header("Statystyka (opcjonalnie)")]
     [SerializeField] private TMP_Text txtStats;
 
-    private RoomRematch rematch;
-  
+    private RoomRematch rematch;  
     private string dialogInitialText = string.Empty;
+    private bool exitRequested;
+    private bool menuSceneLoading;
 
 
     // ---- helpers ----
@@ -74,30 +74,26 @@ public class ResultUI : MonoBehaviourPunCallbacks
 
         // statystyka
         SetStatsText();
-    }
-       
-
+    }    
 
     // ---- UI callbacks ----
     public void OnClickZagrajPonownie()
     {
         if (!rematch) rematch = FindOne<RoomRematch>();
 
-        // pokaż panel u siebie, a przez RoomRematch pokaż go także u przeciwnika
-         if (!PhotonNetwork.InRoom || rematch == null)
+        if (!PhotonNetwork.InRoom || rematch == null)
         {
             Debug.LogWarning("[ResultUI] Brak połączenia z pokojem lub RoomRematch niegotowy.");
             return;
         }
-        // pokaż panel u siebie, a przez RoomRematch pokaż go także u przeciwnika
+        exitRequested = false;
+        menuSceneLoading = false;
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
         ResetDialogStatus();
-        rematch.AskForRematch();
-
-        
+        rematch.AskForRematch();        
     }
 
-     public void OnClickTak()
+    public void OnClickTak()
     {
         if (!rematch) rematch = FindOne<RoomRematch>();
         rematch?.SendChoice(true);
@@ -114,6 +110,11 @@ public class ResultUI : MonoBehaviourPunCallbacks
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
         ResetDialogStatus();
+        if (!exitRequested)
+        {
+            CancelInvoke(nameof(BeginExitToMenu));
+            menuSceneLoading = false;
+        }
     }
 
     public void ShowWaiting()
@@ -127,28 +128,47 @@ public class ResultUI : MonoBehaviourPunCallbacks
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
         if (txtDialogInfo) txtDialogInfo.text = declinedStatusText;
-        Invoke(nameof(GoMenu), 1.2f);
+        if (!exitRequested)
+        {
+            exitRequested = true;
+            Invoke(nameof(BeginExitToMenu), 1.2f);
+        }
     }
-     public void ShowAccepted()
+    public void ShowAccepted()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-         if (txtDialogInfo) txtDialogInfo.text = acceptedStatusText;
+        if (txtDialogInfo) txtDialogInfo.text = acceptedStatusText;
     }
     // jeśli RoomRematch zadecyduje o rewanżu, on zrobi PhotonNetwork.LoadLevel("Game")
     // (tu nic nie trzeba dodawać)
 
-    private void GoMenu()
+     private void BeginExitToMenu()
     {
-        if (PhotonNetwork.InRoom) PhotonNetwork.LeaveRoom();
-        else UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        if (menuSceneLoading) return;
+
+        if (PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.LeaveRoom();
+        }
+        else
+        {
+            LoadMenuScene();
+        }
     }
 
     public override void OnLeftRoom()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        CancelInvoke(nameof(BeginExitToMenu));
+        LoadMenuScene();
     }
-     private void ResetDialogStatus()
+    private void ResetDialogStatus()
     {
         if (txtDialogInfo) txtDialogInfo.text = dialogInitialText;
+    }
+     private void LoadMenuScene()
+    {
+        if (menuSceneLoading) return;
+        menuSceneLoading = true;
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
     }
 }

@@ -41,10 +41,11 @@ public class MenuUI : MonoBehaviour
         Debug.Log("[MenuUI] Statystyki click");
         Show(panelStatystyki);
 
-        int w = PlayerPrefs.GetInt("wins", 0);
-        int l = PlayerPrefs.GetInt("losses", 0);
-        int d = PlayerPrefs.GetInt("draws", 0);
-        int g = PlayerPrefs.GetInt("games", 0);
+        int w = PlayerStatsStorage.GetInt("wins", 0);
+        int l = PlayerStatsStorage.GetInt("losses", 0);
+        int d = PlayerStatsStorage.GetInt("draws", 0);
+        int g = PlayerStatsStorage.GetInt("games", 0);
+
 
         txtWygrane?.SetText($"Wygrane: {w}");
         txtPrzegrane?.SetText($"Przegrane: {l}");
