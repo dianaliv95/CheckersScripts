@@ -334,16 +334,16 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         var winner = resultFlag < 0 ? PieceColor.White : PieceColor.Black;
         bool iWon  = (winner == myColor);
-
-        PlayerPrefs.SetInt("lastResult", iWon ? 1 : (resultFlag == 0 ? 0 : -1)); // 1 win, 0 draw, -1 lose
-        PlayerPrefs.SetInt("games",  PlayerPrefs.GetInt("games",  0) + 1);
+        PlayerStatsStorage.SetInt("lastResult", iWon ? 1 : (resultFlag == 0 ? 0 : -1)); // 1 win, 0 draw, -1 lose
+        PlayerStatsStorage.Increment("games");
+       
         if (resultFlag == 0)
-            PlayerPrefs.SetInt("draws",  PlayerPrefs.GetInt("draws",  0) + 1);
+            PlayerStatsStorage.Increment("draws");
         else if (iWon)
-            PlayerPrefs.SetInt("wins",   PlayerPrefs.GetInt("wins",   0) + 1);
+            PlayerStatsStorage.Increment("wins");
         else
-            PlayerPrefs.SetInt("losses", PlayerPrefs.GetInt("losses", 0) + 1);
-        PlayerPrefs.Save();
+             PlayerStatsStorage.Increment("losses");
+        PlayerStatsStorage.Save();
 
         if (PhotonNetwork.IsMasterClient)
             PhotonNetwork.LoadLevel("Result");

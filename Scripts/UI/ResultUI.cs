@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class ResultUI : MonoBehaviourPunCallbacks
 {
+    private const string RematchQuestion = "Czy chce zagrać z tym samym przeciwnikiem?";
     [Header("Główny napis (jeden Text TMP)")]
     [SerializeField] private TMP_Text txtRezultat;  // <-- перетащи сюда Twój "TxtRezultat"
 
@@ -20,6 +21,7 @@ public class ResultUI : MonoBehaviourPunCallbacks
     [SerializeField] private TMP_Text txtStats;
 
     private RoomRematch rematch;
+     private bool autoAskTriggered;
 
     // ---- helpers ----
     private T FindOne<T>() where T : Object
@@ -45,10 +47,10 @@ public class ResultUI : MonoBehaviourPunCallbacks
     private void SetStatsText()
     {
         if (!txtStats) return;
-        int g = PlayerPrefs.GetInt("games",  0);
-        int w = PlayerPrefs.GetInt("wins",   0);
-        int l = PlayerPrefs.GetInt("losses", 0);
-        int d = PlayerPrefs.GetInt("draws",  0);
+       int g = PlayerStatsStorage.GetInt("games",  0);
+        int w = PlayerStatsStorage.GetInt("wins",   0);
+        int l = PlayerStatsStorage.GetInt("losses", 0);
+        int d = PlayerStatsStorage.GetInt("draws",  0);
         txtStats.text = $"Gry: {g}\nWygrane: {w}\nPrzegrane: {l}\nRemisy: {d}";
     }
 
@@ -58,7 +60,7 @@ public class ResultUI : MonoBehaviourPunCallbacks
         rematch = FindOne<RoomRematch>();
 
         // ustaw wynik
-        int last = PlayerPrefs.GetInt("lastResult", 0);  // 1 / 0 / -1
+       int last = PlayerStatsStorage.GetInt("lastResult", 0);  // 1 / 0 / -1
         SetResultUI(last);
 
         // panel pytania — wyłączony na starcie
@@ -67,7 +69,23 @@ public class ResultUI : MonoBehaviourPunCallbacks
 
         // statystyka
         SetStatsText();
+        TryAutoAskForRematch();
     }
+
+    private void TryAutoAskForRematch()
+    {
+        if (autoAskTriggered) return;
+        if (!PhotonNetwork.InRoom) return;
+
+        if (!rematch) rematch = FindOne<RoomRematch>();
+        if (!rematch) return;
+
+        autoAskTriggered = true;
+
+        if (PhotonNetwork.IsMasterClient)
+            rematch.AskForRematch();
+    }
+    
 
     // ---- UI callbacks ----
     public void OnClickZagrajPonownie()
@@ -76,7 +94,8 @@ public class ResultUI : MonoBehaviourPunCallbacks
 
         // pokaż panel u siebie, a przez RoomRematch pokaż go także u przeciwnika
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = "";
+         if (txtDialogInfo)   txtDialogInfo.text = RematchQuestion;
+        autoAskTriggered = true;
 
         if (rematch != null)
             rematch.AskForRematch();  // wyśle RPC do obu stron, żeby panel się pojawił
@@ -91,19 +110,19 @@ public class ResultUI : MonoBehaviourPunCallbacks
     public void ShowAskPanelRPC()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = "";
+         if (txtDialogInfo)   txtDialogInfo.text = RematchQuestion;
     }
 
     public void ShowWaiting()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = "Czekam na decyzję przeciwnika…";
+        if (txtDialogInfo)   txtDialogInfo.text = $"{RematchQuestion}\nCzekam na decyzję przeciwnika…";
     }
 
     public void ShowDeclinedAndExit()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = "Przeciwnik odmówił";
+        if (txtDialogInfo)   txtDialogInfo.text = $"{RematchQuestion}\nPrzeciwnik odmówił";
         Invoke(nameof(GoMenu), 1.2f);
     }
 
