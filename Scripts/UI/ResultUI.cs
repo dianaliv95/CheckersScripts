@@ -24,7 +24,7 @@ public class ResultUI : MonoBehaviourPunCallbacks
     [SerializeField] private TMP_Text txtStats;
 
     private RoomRematch rematch;
-    private bool autoAskTriggered;
+  
     private string dialogInitialText = string.Empty;
 
 
@@ -74,45 +74,8 @@ public class ResultUI : MonoBehaviourPunCallbacks
 
         // statystyka
         SetStatsText();
-        TryAutoAskForRematch();
-         if (!autoAskTriggered)
-            StartCoroutine(WaitForRematchAvailability());
     }
- private IEnumerator WaitForRematchAvailability()
-    {
-        while (!autoAskTriggered)
-        {
-            if (!PhotonNetwork.InRoom)
-            {
-                yield return null;
-                continue;
-            }
-
-            if (!rematch) rematch = FindOne<RoomRematch>();
-            if (!rematch)
-            {
-                yield return null;
-                continue;
-            }
-
-            TryAutoAskForRematch();
-            if (!autoAskTriggered)
-                yield return null;
-        }
-    }
-    private void TryAutoAskForRematch()
-    {
-        if (autoAskTriggered) return;
-        if (!PhotonNetwork.InRoom) return;
-
-        if (!rematch) rematch = FindOne<RoomRematch>();
-        if (!rematch) return;
-
-        autoAskTriggered = true;
-
-        if (PhotonNetwork.IsMasterClient)
-            rematch.AskForRematch();
-    }
+       
 
 
     // ---- UI callbacks ----
@@ -121,18 +84,30 @@ public class ResultUI : MonoBehaviourPunCallbacks
         if (!rematch) rematch = FindOne<RoomRematch>();
 
         // pokaż panel u siebie, a przez RoomRematch pokaż go także u przeciwnika
+         if (!PhotonNetwork.InRoom || rematch == null)
+        {
+            Debug.LogWarning("[ResultUI] Brak połączenia z pokojem lub RoomRematch niegotowy.");
+            return;
+        }
+        // pokaż panel u siebie, a przez RoomRematch pokaż go także u przeciwnika
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
         ResetDialogStatus();
-        autoAskTriggered = true;
+        rematch.AskForRematch();
 
-        if (rematch != null)
-            rematch.AskForRematch();  // wyśle RPC do obu stron, żeby panel się pojawił
-        else
-            Debug.LogWarning("[ResultUI] RoomRematch nie znaleziony.");
+        
     }
 
-    public void OnClickTak() { if (rematch != null) rematch.SendChoice(true); }
-    public void OnClickNie() { if (rematch != null) rematch.SendChoice(false); }
+     public void OnClickTak()
+    {
+        if (!rematch) rematch = FindOne<RoomRematch>();
+        rematch?.SendChoice(true);
+    }
+
+    public void OnClickNie()
+    {
+        if (!rematch) rematch = FindOne<RoomRematch>();
+        rematch?.SendChoice(false);
+    }
 
     // ---- Wywoływane z RoomRematch (RPC/bezpośrednio) ----
     public void ShowAskPanelRPC()
@@ -157,7 +132,7 @@ public class ResultUI : MonoBehaviourPunCallbacks
      public void ShowAccepted()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = acceptedStatusText;
+         if (txtDialogInfo) txtDialogInfo.text = acceptedStatusText;
     }
     // jeśli RoomRematch zadecyduje o rewanżu, on zrobi PhotonNetwork.LoadLevel("Game")
     // (tu nic nie trzeba dodawać)
