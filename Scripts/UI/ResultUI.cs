@@ -1,5 +1,6 @@
 using Photon.Pun;
 using TMPro;
+using System.Collections;
 using UnityEngine;
 
 public class ResultUI : MonoBehaviourPunCallbacks
@@ -74,8 +75,31 @@ public class ResultUI : MonoBehaviourPunCallbacks
         // statystyka
         SetStatsText();
         TryAutoAskForRematch();
+         if (!autoAskTriggered)
+            StartCoroutine(WaitForRematchAvailability());
     }
+ private IEnumerator WaitForRematchAvailability()
+    {
+        while (!autoAskTriggered)
+        {
+            if (!PhotonNetwork.InRoom)
+            {
+                yield return null;
+                continue;
+            }
 
+            if (!rematch) rematch = FindOne<RoomRematch>();
+            if (!rematch)
+            {
+                yield return null;
+                continue;
+            }
+
+            TryAutoAskForRematch();
+            if (!autoAskTriggered)
+                yield return null;
+        }
+    }
     private void TryAutoAskForRematch()
     {
         if (autoAskTriggered) return;
