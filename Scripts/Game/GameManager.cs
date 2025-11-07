@@ -60,7 +60,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         {
             // страховка от «залипших» сообщений из предыдущей комнаты
             PhotonNetwork.CleanRpcBufferIfMine(photonView);
-            photonView.RPC(nameof(RPC_BeginNewGame), RpcTarget.All);
+           photonView.RPC(nameof(RPC_BeginNewGame), RpcTarget.AllBuffered);
         }
     }
 
@@ -334,7 +334,7 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         var winner = resultFlag < 0 ? PieceColor.White : PieceColor.Black;
         bool iWon  = (winner == myColor);
-        PlayerStatsStorage.SetInt("lastResult", iWon ? 1 : (resultFlag == 0 ? 0 : -1)); // 1 win, 0 draw, -1 lose
+       PlayerStatsStorage.SetInt("lastResult", iWon ? 1 : (resultFlag == 0 ? 0 : -1)); // 1 win, 0 draw, -1 lose
         PlayerStatsStorage.Increment("games");
        
         if (resultFlag == 0)

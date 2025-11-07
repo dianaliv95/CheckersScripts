@@ -76,6 +76,7 @@ public class RoomRematch : MonoBehaviourPunCallbacks   // <-- ВАЖНО
     // ---------- logic ----------
     private void EvaluateState()
     {
+        EnsureUI();
         // отказал кто-то?
         foreach (var kv in choice)
             if (kv.Value == -1)
@@ -94,6 +95,7 @@ public class RoomRematch : MonoBehaviourPunCallbacks   // <-- ВАЖНО
 
         if (allYes)
         {
+            ui?.ShowAccepted();
             if (PhotonNetwork.IsMasterClient)
                 PhotonNetwork.LoadLevel("Game"); // AutomaticallySyncScene = true
             return;

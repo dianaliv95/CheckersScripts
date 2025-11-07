@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ResultUI : MonoBehaviourPunCallbacks
 {
-    private const string RematchQuestion = "Czy chce zagrać z tym samym przeciwnikiem?";
+
     [Header("Główny napis (jeden Text TMP)")]
     [SerializeField] private TMP_Text txtRezultat;  // <-- перетащи сюда Twój "TxtRezultat"
 
@@ -15,13 +15,17 @@ public class ResultUI : MonoBehaviourPunCallbacks
 
     [Header("Panel pytania")]
     [SerializeField] private GameObject panelCzyZagrasz;
-    [SerializeField] private TMP_Text   txtDialogInfo;
-
+    [SerializeField] private TMP_Text txtDialogInfo;
+    [SerializeField] private string waitingStatusText = "Czekam na decyzję przeciwnika…";
+    [SerializeField] private string declinedStatusText = "Przeciwnik odmówił";
+    [SerializeField] private string acceptedStatusText = "Obaj gracze zaakceptowali. Ładowanie gry…";
     [Header("Statystyka (opcjonalnie)")]
     [SerializeField] private TMP_Text txtStats;
 
     private RoomRematch rematch;
-     private bool autoAskTriggered;
+    private bool autoAskTriggered;
+    private string dialogInitialText = string.Empty;
+
 
     // ---- helpers ----
     private T FindOne<T>() where T : Object
@@ -39,18 +43,18 @@ public class ResultUI : MonoBehaviourPunCallbacks
         string msg = last == 1 ? "Wygrana!" : last == -1 ? "Przegrana!" : "Remis";
         if (txtRezultat) txtRezultat.text = msg;
 
-        if (wygranaObj)   wygranaObj.SetActive(last == 1);
+        if (wygranaObj) wygranaObj.SetActive(last == 1);
         if (przegranaObj) przegranaObj.SetActive(last == -1);
-        if (remisObj)     remisObj.SetActive(last == 0);
+        if (remisObj) remisObj.SetActive(last == 0);
     }
 
     private void SetStatsText()
     {
         if (!txtStats) return;
-       int g = PlayerStatsStorage.GetInt("games",  0);
-        int w = PlayerStatsStorage.GetInt("wins",   0);
+        int g = PlayerStatsStorage.GetInt("games", 0);
+        int w = PlayerStatsStorage.GetInt("wins", 0);
         int l = PlayerStatsStorage.GetInt("losses", 0);
-        int d = PlayerStatsStorage.GetInt("draws",  0);
+        int d = PlayerStatsStorage.GetInt("draws", 0);
         txtStats.text = $"Gry: {g}\nWygrane: {w}\nPrzegrane: {l}\nRemisy: {d}";
     }
 
@@ -60,12 +64,12 @@ public class ResultUI : MonoBehaviourPunCallbacks
         rematch = FindOne<RoomRematch>();
 
         // ustaw wynik
-       int last = PlayerStatsStorage.GetInt("lastResult", 0);  // 1 / 0 / -1
+        int last = PlayerStatsStorage.GetInt("lastResult", 0);  // 1 / 0 / -1
         SetResultUI(last);
 
         // panel pytania — wyłączony na starcie
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(false);
-        if (txtDialogInfo)   txtDialogInfo.text = "";
+        if (txtDialogInfo) dialogInitialText = txtDialogInfo.text;
 
         // statystyka
         SetStatsText();
@@ -85,7 +89,7 @@ public class ResultUI : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
             rematch.AskForRematch();
     }
-    
+
 
     // ---- UI callbacks ----
     public void OnClickZagrajPonownie()
@@ -94,7 +98,7 @@ public class ResultUI : MonoBehaviourPunCallbacks
 
         // pokaż panel u siebie, a przez RoomRematch pokaż go także u przeciwnika
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-         if (txtDialogInfo)   txtDialogInfo.text = RematchQuestion;
+        ResetDialogStatus();
         autoAskTriggered = true;
 
         if (rematch != null)
@@ -103,29 +107,34 @@ public class ResultUI : MonoBehaviourPunCallbacks
             Debug.LogWarning("[ResultUI] RoomRematch nie znaleziony.");
     }
 
-    public void OnClickTak()  { if (rematch != null) rematch.SendChoice(true);  }
-    public void OnClickNie()  { if (rematch != null) rematch.SendChoice(false); }
+    public void OnClickTak() { if (rematch != null) rematch.SendChoice(true); }
+    public void OnClickNie() { if (rematch != null) rematch.SendChoice(false); }
 
     // ---- Wywoływane z RoomRematch (RPC/bezpośrednio) ----
     public void ShowAskPanelRPC()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-         if (txtDialogInfo)   txtDialogInfo.text = RematchQuestion;
+        ResetDialogStatus();
     }
 
     public void ShowWaiting()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = $"{RematchQuestion}\nCzekam na decyzję przeciwnika…";
+        if (txtDialogInfo) txtDialogInfo.text = waitingStatusText;
     }
+
 
     public void ShowDeclinedAndExit()
     {
         if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
-        if (txtDialogInfo)   txtDialogInfo.text = $"{RematchQuestion}\nPrzeciwnik odmówił";
+        if (txtDialogInfo) txtDialogInfo.text = declinedStatusText;
         Invoke(nameof(GoMenu), 1.2f);
     }
-
+     public void ShowAccepted()
+    {
+        if (panelCzyZagrasz) panelCzyZagrasz.SetActive(true);
+        if (txtDialogInfo)   txtDialogInfo.text = acceptedStatusText;
+    }
     // jeśli RoomRematch zadecyduje o rewanżu, on zrobi PhotonNetwork.LoadLevel("Game")
     // (tu nic nie trzeba dodawać)
 
@@ -138,5 +147,9 @@ public class ResultUI : MonoBehaviourPunCallbacks
     public override void OnLeftRoom()
     {
         UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+    }
+     private void ResetDialogStatus()
+    {
+        if (txtDialogInfo) txtDialogInfo.text = dialogInitialText;
     }
 }
